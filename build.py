@@ -32,6 +32,8 @@ MAX_DEVICE_JSON_BYTES = 16_384
 MAX_HTTP_BYTES = 4 * 1024 * 1024
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 IMAGE_BACKGROUND = (11, 14, 13)
+AVATAR_SIZE = 48
+LEGACY_AVATAR_SIZE = 32
 USER_AGENT = "folotoy-display-pages/1.0"
 LEVELS = {
     "NONE": "0",
@@ -662,12 +664,27 @@ def previous_module(previous: dict[str, Any] | None, name: str, default: dict[st
     return reused
 
 
+def previous_avatar_size(image: Any) -> int | None:
+    if not isinstance(image, dict):
+        return None
+    width = image.get("width")
+    height = image.get("height")
+    if (not isinstance(width, int) or isinstance(width, bool)
+            or not isinstance(height, int) or isinstance(height, bool)
+            or width != height or width not in (AVATAR_SIZE, LEGACY_AVATAR_SIZE)):
+        return None
+    return width
+
+
 def retain_previous_images(previous: dict[str, Any] | None, assets: AssetStore, username: str) -> None:
     if not previous or str(previous.get("profile", {}).get("username", "")).lower() != username.lower():
         return
     profile = previous.get("profile", {})
     if isinstance(profile, dict):
-        assets.reuse(profile.get("avatar"), 32, 32)
+        avatar = profile.get("avatar")
+        size = previous_avatar_size(avatar)
+        if size is not None:
+            assets.reuse(avatar, size, size)
     achievements = previous.get("achievements")
     if isinstance(achievements, dict) and isinstance(achievements.get("items"), list):
         for badge in achievements["items"][:6]:
@@ -687,15 +704,21 @@ def make_profile(profile: dict[str, Any], config: dict[str, Any], assets: AssetS
 
     avatar = None
     avatar_url = profile.get("avatar_url", "")
+    avatar_download_failed = False
     if avatar_url:
         try:
-            path = assets.convert_and_store(avatar_url, 32, 32, avatar=True)
-            avatar = {"path": path, "width": 32, "height": 32, "format": "rgb565le"}
+            path = assets.convert_and_store(avatar_url, AVATAR_SIZE, AVATAR_SIZE, avatar=True)
+            avatar = {"path": path, "width": AVATAR_SIZE, "height": AVATAR_SIZE, "format": "rgb565le"}
         except Exception as exc:
             warn_optional("avatar image", exc)
-            pass
+            avatar_download_failed = True
     if avatar is None and previous and str(previous.get("profile", {}).get("username", "")).lower() == username.lower():
-        avatar = assets.reuse(previous.get("profile", {}).get("avatar"), 32, 32)
+        previous_avatar = previous.get("profile", {}).get("avatar")
+        avatar = assets.reuse(previous_avatar, AVATAR_SIZE, AVATAR_SIZE)
+        if avatar is None and avatar_download_failed:
+            size = previous_avatar_size(previous_avatar)
+            if size == LEGACY_AVATAR_SIZE:
+                avatar = assets.reuse(previous_avatar, size, size)
 
     return {
         "username": username,

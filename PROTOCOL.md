@@ -35,14 +35,14 @@ Optional sections have `available` and `stale` booleans. When `available` is fal
   "following": 56,
   "avatar": {
     "path": "assets/<content-hash>.rgb565",
-    "width": 32,
-    "height": 32,
+    "width": 48,
+    "height": 48,
     "format": "rgb565le"
   }
 }
 ```
 
-`avatar` may be `null`. The build uses the `display_name` and `headline` overrides in `content.yaml` when set; otherwise it uses the corresponding public GitHub profile values. Text is printable ASCII and bounded to the device field sizes: username 39 bytes, name 63, and headline 36.
+`avatar` may be `null`. Its preferred dimensions are 48×48; 32×32 is also valid for a retained legacy image. Width and height must both be 48 or both be 32. New avatar images are published at 48×48 when available; if refreshing the source image fails, a previously published 32×32 avatar may be retained. The build uses the `display_name` and `headline` overrides in `content.yaml` when set; otherwise it uses the corresponding public GitHub profile values. Text is printable ASCII and bounded to the device field sizes: username 39 bytes, name 63, and headline 36.
 
 ## Calendar
 
@@ -76,7 +76,7 @@ The list is ordered by recent push and contains at most three entries. Manual li
 
 ## RGB565LE image files
 
-Each image is a headerless row-major RGB565 bitmap. A 32×32 avatar is exactly 2,048 bytes. A 24×24 badge is exactly 1,152 bytes. Each 16-bit pixel is stored little-endian: the low byte first, followed by the high byte. Bits are `RRRRRGGG GGGBBBBB` (5 red, 6 green, 5 blue). The build scales images to the target square and composites transparency over `#0B0E0D` before conversion.
+Each image is a headerless row-major RGB565 bitmap. A preferred 48×48 avatar is exactly 4,608 bytes; a legacy 32×32 avatar is exactly 2,048 bytes. A 24×24 badge is exactly 1,152 bytes. Each 16-bit pixel is stored little-endian: the low byte first, followed by the high byte. Bits are `RRRRRGGG GGGBBBBB` (5 red, 6 green, 5 blue). The build scales images to the target square and composites transparency over `#0B0E0D` before conversion.
 
 ## Refresh and offline behavior
 
